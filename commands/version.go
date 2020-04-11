@@ -1,10 +1,8 @@
 package commands
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
-	"os"
 )
 
 var versionCommand = &cobra.Command{
@@ -17,11 +15,8 @@ var versionCommand = &cobra.Command{
 	},
 }
 
-func Execute() {
-	if err := versionCommand.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+func init() {
+	rootCmd.AddCommand(versionCommand)
 }
 
 func printSergeDeltaVersion() {
