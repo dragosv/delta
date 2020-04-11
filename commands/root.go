@@ -14,9 +14,9 @@ var (
 	cfgFile string
 
 	rootCmd = &cobra.Command{
-		Use:   "serge-delta",
-		Short: "Serge Delta Command Line Interface",
-		Long:  `Serge Delta is a Translation Management Service for Serge that allows delta jobs.`,
+		Use:   "delta",
+		Short: "Delta Translation Management Service CLI",
+		Long:  `Delta is a plugable Translation Management Service Command Line Interface that allows delta jobs.`,
 	}
 )
 
