@@ -1,2 +1,2 @@
-# serge-delta
-Serge Delta Translation Service Command Line Interface
+# Delta
+Plugable Command Line Interface for job based Translation Management Services
