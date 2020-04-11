@@ -7,8 +7,8 @@ import (
 
 var versionCommand = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of Serge Delta",
-	Long:  `All software has versions. This is Serge Delta's.`,
+	Short: "Print the version number of Delta",
+	Long:  `All software has versions. This is Delta's.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		printSergeDeltaVersion()
 		return nil

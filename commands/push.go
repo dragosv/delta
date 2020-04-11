@@ -7,8 +7,8 @@ import (
 
 var pushCommand = &cobra.Command{
 	Use:   "push",
-	Short: "Push command Serge Delta",
-	Long:  `Push command Serge Delta.`,
+	Short: "Push command Delta",
+	Long:  `Push command Delta.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		runPushCommand()
 		return nil

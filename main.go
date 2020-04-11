@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dragosv/serge-delta/commands"
+	"github.com/dragosv/delta/commands"
 )
 
 func main() {
