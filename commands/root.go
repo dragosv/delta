@@ -15,8 +15,8 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "delta",
-		Short: "Delta Translation Management Service CLI",
-		Long:  `Delta is a plugable Translation Management Service Command Line Interface that allows delta jobs.`,
+		Short: "Delta Command Line Interface",
+		Long:  `Delta is plugable Command Line Interface for job based Translation Management Services.`,
 	}
 )
 
