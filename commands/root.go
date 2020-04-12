@@ -12,6 +12,7 @@ import (
 var (
 	// Used for flags.
 	cfgFile string
+	source  string
 
 	rootCmd = &cobra.Command{
 		Use:   "delta",
@@ -31,6 +32,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.delta)")
+	rootCmd.Flags().StringVarP(&source, "source", "s", "", "Source directory to read from")
+	viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
 }
 
 func er(msg interface{}) {
