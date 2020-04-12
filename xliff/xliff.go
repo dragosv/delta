@@ -21,10 +21,17 @@ type Header struct {
 }
 
 type TransUnit struct {
-	ID     string `xml:"id,attr"`
-	Source string `xml:"source"`
-	Target string `xml:"target"`
-	Note   string `xml:"note"`
+	ID      string `xml:"id,attr"`
+	Resname string `xml:"resname,attr"`
+	Source  string `xml:"source"`
+	Target  Target `xml:"target"`
+	Note    string `xml:"note"`
+}
+
+type Target struct {
+	State          string `xml:"state,attr"`
+	StateQualifier string `xml:"state-qualifier,attr"`
+	Data           string `xml:",chardata"`
 }
 
 type Body struct {
@@ -178,7 +185,7 @@ func (d Document) Validate() []ValidationError {
 						transUnit.ID, file.Original),
 				})
 			}
-			if transUnit.Target == "" {
+			if transUnit.Target.Data == "" {
 				errors = append(errors, ValidationError{
 					Code: MissingTransUnitTarget,
 					Message: fmt.Sprintf("Translation unit '%s' in file '%s' is missing 'target' attribute",
@@ -196,12 +203,28 @@ func (d Document) Validate() []ValidationError {
 func (d Document) IsComplete() bool {
 	for _, file := range d.Files {
 		for _, transUnit := range file.Body.TransUnits {
-			if transUnit.Source == "" || transUnit.Target == "" {
+			if transUnit.Source == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
 				return false
 			}
 		}
 	}
 	return true
+}
+
+// Returns true if all translation units in all files have both a
+// non-empty source and target.
+func (d Document) IncompleteTransUnits() []TransUnit {
+	var transUnits []TransUnit
+
+	for _, file := range d.Files {
+		for _, transUnit := range file.Body.TransUnits {
+			if transUnit.Source == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
+				transUnits = append(transUnits, transUnit)
+			}
+		}
+	}
+
+	return transUnits
 }
 
 func (d Document) File(original string) (File, bool) {
