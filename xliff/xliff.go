@@ -23,15 +23,21 @@ type Header struct {
 type TransUnit struct {
 	ID      string `xml:"id,attr"`
 	Resname string `xml:"resname,attr"`
-	Source  string `xml:"source"`
+	Source  Source `xml:"source"`
 	Target  Target `xml:"target"`
 	Note    string `xml:"note"`
+}
+
+type Source struct {
+	Data     string `xml:",chardata"`
+	Language string `xml:"lang,attr"`
 }
 
 type Target struct {
 	State          string `xml:"state,attr"`
 	StateQualifier string `xml:"state-qualifier,attr"`
 	Data           string `xml:",chardata"`
+	Language       string `xml:"lang,attr"`
 }
 
 type Body struct {
@@ -178,7 +184,7 @@ func (d Document) Validate() []ValidationError {
 						idx, file.Original),
 				})
 			}
-			if transUnit.Source == "" {
+			if transUnit.Source.Data == "" {
 				errors = append(errors, ValidationError{
 					Code: MissingTransUnitSource,
 					Message: fmt.Sprintf("Translation unit '%s' in file '%s' is missing 'source' attribute",
@@ -189,6 +195,13 @@ func (d Document) Validate() []ValidationError {
 				errors = append(errors, ValidationError{
 					Code: MissingTransUnitTarget,
 					Message: fmt.Sprintf("Translation unit '%s' in file '%s' is missing 'target' attribute",
+						transUnit.ID, file.Original),
+				})
+			}
+			if transUnit.Target.Language != file.TargetLanguage {
+				errors = append(errors, ValidationError{
+					Code: InconsistentTargetLanguage,
+					Message: fmt.Sprintf("Translation unit '%s' in file '%s' is has a different target language attribute",
 						transUnit.ID, file.Original),
 				})
 			}
@@ -203,7 +216,7 @@ func (d Document) Validate() []ValidationError {
 func (d Document) IsComplete() bool {
 	for _, file := range d.Files {
 		for _, transUnit := range file.Body.TransUnits {
-			if transUnit.Source == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
+			if transUnit.Source.Data == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
 				return false
 			}
 		}
@@ -218,7 +231,7 @@ func (d Document) IncompleteTransUnits() []TransUnit {
 
 	for _, file := range d.Files {
 		for _, transUnit := range file.Body.TransUnits {
-			if transUnit.Source == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
+			if transUnit.Source.Data == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
 				transUnits = append(transUnits, transUnit)
 			}
 		}

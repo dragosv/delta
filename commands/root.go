@@ -11,13 +11,16 @@ import (
 
 var (
 	// Used for flags.
-	cfgFile string
-	source  string
+	cfgFile            string
+	source             string
+	databaseDialect    string
+	databaseConnection string
+	destination        string
 
 	rootCmd = &cobra.Command{
 		Use:   "delta",
 		Short: "Delta Command Line Interface",
-		Long:  `Delta is plugable Command Line Interface for job based Translation Management Services.`,
+		Long:  `Delta is a plugable Command Line Interface for job based Translation Management Services.`,
 	}
 )
 
@@ -32,8 +35,16 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.delta)")
+
 	rootCmd.Flags().StringVarP(&source, "source", "s", "", "Source directory to read from")
+	rootCmd.Flags().StringVarP(&destination, "destionation", "d", "", "Destination directory to write to")
+	rootCmd.Flags().StringVarP(&databaseDialect, "dialect", "", "", "Database dialect")
+	rootCmd.Flags().StringVarP(&databaseConnection, "connection", "", "", "Database connection string")
+
 	viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
+	viper.BindPFlag("destination", rootCmd.PersistentFlags().Lookup("destination"))
+	viper.BindPFlag("dialect", rootCmd.PersistentFlags().Lookup("dialect"))
+	viper.BindPFlag("connection", rootCmd.PersistentFlags().Lookup("connection"))
 }
 
 func er(msg interface{}) {
