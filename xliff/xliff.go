@@ -25,7 +25,13 @@ type TransUnit struct {
 	Resname string `xml:"resname,attr"`
 	Source  Source `xml:"source"`
 	Target  Target `xml:"target"`
-	Note    string `xml:"note"`
+	Notes   []Note `xml:"note"`
+}
+
+type Note struct {
+	Data     string `xml:",chardata"`
+	Language string `xml:"lang,attr"`
+	From     string `xml:"from,attr"`
 }
 
 type Source struct {

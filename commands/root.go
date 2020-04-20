@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"github.com/dragosv/delta/db"
+	"github.com/jinzhu/gorm"
 	"os"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -72,4 +74,10 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func openDatabase() (database *gorm.DB, err error) {
+	database, err = db.OpenDatabase(databaseDialect, databaseConnection)
+
+	return
 }
