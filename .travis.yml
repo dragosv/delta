@@ -49,8 +49,6 @@ before_install:
     choco install mingw -y;
     export PATH=/c/tools/mingw64/bin:"$PATH";
     fi
-  - gem install asciidoctor
-  - type asciidoctor
 
 install:
   - mkdir -p $HOME/src
@@ -62,3 +60,5 @@ script:
   - go mod download
   - go mod verify
   - go build
+  - cd commands
+  - go test

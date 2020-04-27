@@ -217,8 +217,8 @@ func (d Document) Validate() []ValidationError {
 	return errors
 }
 
-// Returns true if all translation units in all files have both a
-// non-empty source and target.
+// Returns true if all translation units in all files have an
+// empty source or target.
 func (d Document) IsComplete() bool {
 	for _, file := range d.Files {
 		for _, transUnit := range file.Body.TransUnits {
@@ -230,8 +230,8 @@ func (d Document) IsComplete() bool {
 	return true
 }
 
-// Returns true if all translation units in all files have both a
-// non-empty source and target.
+// Returns all translation units in all files have an
+// empty source or target.
 func (d Document) IncompleteTransUnits() []TransUnit {
 	var transUnits []TransUnit
 

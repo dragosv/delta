@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/xml"
+	"errors"
 	"github.com/dragosv/delta/db"
 	"github.com/dragosv/delta/xliff"
 	"github.com/jinzhu/gorm"
@@ -11,7 +12,6 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"time"
 )
 
 var pushCommand = &cobra.Command{
@@ -19,49 +19,68 @@ var pushCommand = &cobra.Command{
 	Short: "Push command Delta",
 	Long:  `Push command Delta.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		runPushCommand()
-		return nil
+		fs = afero.NewOsFs()
+
+		var err error
+
+		database, err = openDatabase(databaseDialect, databaseConnection)
+		if err != nil {
+			panic("failed to connect database")
+		}
+
+		return runPushCommand(source, destination)
 	},
 }
 
 var fs afero.Fs
 var database *gorm.DB
 var dbJob db.Job
+var sourceDocumentMap map[string]xliff.Document
 var documentMap map[string]xliff.Document
 
 func init() {
 	rootCmd.AddCommand(pushCommand)
 }
 
-func runPushCommand() {
+func runPushCommand(source string, destination string) error {
 	jww.FEEDBACK.Println("push")
-
-	database, err := openDatabase()
-	if err != nil {
-		panic("failed to connect database")
-	}
-
-	defer database.Close()
 
 	database.Where("active = ?", true).First(&dbJob)
 
-	if dbJob.ID != 0 {
+	if !database.NewRecord(dbJob.ID) {
 		jww.FEEDBACK.Println("active job exists created at " + dbJob.CreatedAt.String())
 
-		return
+		return errors.New("active job exists")
 	}
 
 	dbJob = db.Job{
-		CreatedAt: time.Now(),
-		Active:    false,
+		Active: true,
 	}
 
-	database.Save(dbJob)
+	err := database.Create(&dbJob).Error
 
-	fs = afero.NewOsFs()
+	if err != nil {
+		jww.FEEDBACK.Println(err)
+
+		return err
+	}
+
+	if database.NewRecord(dbJob) {
+		return errors.New("active job not created")
+	}
+
+	sourceDocumentMap = make(map[string]xliff.Document)
 	documentMap = make(map[string]xliff.Document)
 
 	afero.Walk(fs, source, pushWalkFunc)
+
+	for path, document := range sourceDocumentMap {
+		processErr := processSourceDocument(path, document)
+
+		if processErr != nil {
+			panic(processErr)
+		}
+	}
 
 	for language, document := range documentMap {
 		file, err := xml.MarshalIndent(document, "", " ")
@@ -79,9 +98,19 @@ func runPushCommand() {
 			panic("failed to write xliff file " + xliffPath)
 		}
 	}
+
+	return nil
 }
 
 func pushWalkFunc(path string, info os.FileInfo, err error) error {
+	if info == nil {
+		return nil
+	}
+
+	if info.IsDir() {
+		return nil
+	}
+
 	var data, error = afero.ReadFile(fs, path)
 
 	if error != nil {
@@ -96,6 +125,12 @@ func pushWalkFunc(path string, info os.FileInfo, err error) error {
 		return error
 	}
 
+	sourceDocumentMap[path] = document
+
+	return nil
+}
+
+func processSourceDocument(path string, document xliff.Document) error {
 	var dbFile db.File
 	var dbTransUnit db.TransUnit
 	var dbNote db.Note
@@ -107,7 +142,11 @@ func pushWalkFunc(path string, info os.FileInfo, err error) error {
 			Path:  path,
 		}
 
-		database.Save(dbFile)
+		err := database.Create(&dbFile).Error
+
+		if err != nil {
+			return err
+		}
 
 		var incompleteTransUnits = document.IncompleteTransUnits()
 		for _, xliffTransUnit := range incompleteTransUnits {
@@ -123,7 +162,11 @@ func pushWalkFunc(path string, info os.FileInfo, err error) error {
 				TargetLanguage: xliffTransUnit.Target.Language,
 			}
 
-			database.Save(dbTransUnit)
+			err = database.Create(&dbTransUnit).Error
+
+			if err != nil {
+				return err
+			}
 
 			for _, xliffNote := range xliffTransUnit.Notes {
 				dbNote = db.Note{
@@ -134,7 +177,11 @@ func pushWalkFunc(path string, info os.FileInfo, err error) error {
 					From:        xliffNote.From,
 				}
 
-				database.Save(dbNote)
+				err = database.Create(&dbNote).Error
+
+				if err != nil {
+					return err
+				}
 			}
 
 			var transUnit = xliffTransUnit

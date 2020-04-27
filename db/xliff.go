@@ -6,13 +6,11 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"time"
 )
 
 type Job struct {
 	gorm.Model
-	CreatedAt time.Time
-	Active    bool
+	Active bool
 }
 
 type File struct {
@@ -51,6 +49,8 @@ func OpenDatabase(databaseDialect string, databaseConnection string) (database *
 	if err != nil {
 		return
 	}
+
+	database.LogMode(true)
 
 	// Migrate the schema
 	database.AutoMigrate(&Job{})

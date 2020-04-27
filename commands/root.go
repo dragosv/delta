@@ -76,7 +76,7 @@ func initConfig() {
 	}
 }
 
-func openDatabase() (database *gorm.DB, err error) {
+func openDatabase(databaseDialect string, databaseConnection string) (database *gorm.DB, err error) {
 	database, err = db.OpenDatabase(databaseDialect, databaseConnection)
 
 	return
