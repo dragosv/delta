@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"github.com/dragosv/delta/db"
+	"github.com/dragosv/delta/job"
 	"github.com/jinzhu/gorm"
 	"os"
+	p "plugin"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -18,6 +21,8 @@ var (
 	databaseDialect    string
 	databaseConnection string
 	destination        string
+	plugin             string
+	config             string
 
 	rootCmd = &cobra.Command{
 		Use:   "delta",
@@ -39,14 +44,18 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.delta)")
 
 	rootCmd.Flags().StringVarP(&source, "source", "s", "", "Source directory to read from")
-	rootCmd.Flags().StringVarP(&destination, "destionation", "d", "", "Destination directory to write to")
+	rootCmd.Flags().StringVarP(&destination, "destination", "d", "", "Destination directory to write to")
 	rootCmd.Flags().StringVarP(&databaseDialect, "dialect", "", "", "Database dialect")
 	rootCmd.Flags().StringVarP(&databaseConnection, "connection", "", "", "Database connection string")
+	rootCmd.Flags().StringVarP(&plugin, "plugin", "p", "", "Job plugin")
+	rootCmd.Flags().StringVarP(&config, "config", "c", "", "Job plugin configuration file")
 
 	viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
 	viper.BindPFlag("destination", rootCmd.PersistentFlags().Lookup("destination"))
 	viper.BindPFlag("dialect", rootCmd.PersistentFlags().Lookup("dialect"))
 	viper.BindPFlag("connection", rootCmd.PersistentFlags().Lookup("connection"))
+	viper.BindPFlag("plugin", rootCmd.PersistentFlags().Lookup("plugin"))
+	viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 }
 
 func er(msg interface{}) {
@@ -80,4 +89,26 @@ func openDatabase(databaseDialect string, databaseConnection string) (database *
 	database, err = db.OpenDatabase(databaseDialect, databaseConnection)
 
 	return
+}
+
+func getJob() (job.Job, error) {
+	pluginObject, error := p.Open(plugin)
+
+	if error != nil {
+		return nil, error
+	}
+
+	symJob, symJobError := pluginObject.Lookup("Job")
+
+	if symJobError != nil {
+		return nil, error
+	}
+
+	job, ok := symJob.(job.Job)
+
+	if !ok {
+		return nil, errors.New("unexpected type from module symbol")
+	}
+
+	return job, nil
 }

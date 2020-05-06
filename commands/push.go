@@ -25,7 +25,7 @@ var pushCommand = &cobra.Command{
 
 		database, err = openDatabase(databaseDialect, databaseConnection)
 		if err != nil {
-			panic("failed to connect database")
+			return errors.New("failed to connect database " + err.Error())
 		}
 
 		return runPushCommand(source, destination)
@@ -43,14 +43,12 @@ func init() {
 }
 
 func runPushCommand(source string, destination string) error {
-	jww.FEEDBACK.Println("push")
+	jww.FEEDBACK.Println("Running push...")
 
 	database.Where("active = ?", true).First(&dbJob)
 
 	if !database.NewRecord(dbJob.ID) {
-		jww.FEEDBACK.Println("active job exists created at " + dbJob.CreatedAt.String())
-
-		return errors.New("active job exists")
+		return errors.New("active job exists created at " + dbJob.CreatedAt.String())
 	}
 
 	dbJob = db.Job{
@@ -60,13 +58,7 @@ func runPushCommand(source string, destination string) error {
 	err := database.Create(&dbJob).Error
 
 	if err != nil {
-		jww.FEEDBACK.Println(err)
-
 		return err
-	}
-
-	if database.NewRecord(dbJob) {
-		return errors.New("active job not created")
 	}
 
 	sourceDocumentMap = make(map[string]xliff.Document)
@@ -82,21 +74,32 @@ func runPushCommand(source string, destination string) error {
 		}
 	}
 
+	jobID := strconv.FormatUint(uint64(dbJob.ID), 10)
+
 	for language, document := range documentMap {
 		file, err := xml.MarshalIndent(document, "", " ")
 
 		if err != nil {
-			panic("failed to write xliff document for language " + language)
+			return errors.New("failed to write xliff document for language " + language)
 		}
 
-		jobID := strconv.FormatUint(uint64(dbJob.ID), 10)
 		xliffPath := path.Join(destination, jobID, language+".xliff")
 
 		err = afero.WriteFile(fs, xliffPath, file, 0644)
 
 		if err != nil {
-			panic("failed to write xliff file " + xliffPath)
+			return errors.New("failed to write xliff file " + xliffPath)
 		}
+	}
+
+	if plugin != "" {
+		job, error := getJob()
+
+		if error != nil {
+			return errors.New("failed to get job plugin " + error.Error())
+		}
+
+		job.Push(config, path.Join(destination, jobID))
 	}
 
 	return nil
