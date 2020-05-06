@@ -222,7 +222,7 @@ func (d Document) Validate() []ValidationError {
 func (d Document) IsComplete() bool {
 	for _, file := range d.Files {
 		for _, transUnit := range file.Body.TransUnits {
-			if transUnit.Source.Data == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
+			if !transUnit.IsComplete() {
 				return false
 			}
 		}
@@ -237,13 +237,21 @@ func (d Document) IncompleteTransUnits() []TransUnit {
 
 	for _, file := range d.Files {
 		for _, transUnit := range file.Body.TransUnits {
-			if transUnit.Source.Data == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
+			if !transUnit.IsComplete() {
 				transUnits = append(transUnits, transUnit)
 			}
 		}
 	}
 
 	return transUnits
+}
+
+func (transUnit TransUnit) IsComplete() bool {
+	if transUnit.Source.Data == "" || transUnit.Target.Data == "" || (transUnit.Target.State != "translated" && transUnit.Target.State != "signed-off") {
+		return false
+	}
+
+	return true
 }
 
 func (d Document) File(original string) (File, bool) {

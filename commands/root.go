@@ -1,11 +1,14 @@
 package commands
 
 import (
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"github.com/dragosv/delta/db"
 	"github.com/dragosv/delta/job"
+	"github.com/dragosv/delta/xliff"
 	"github.com/jinzhu/gorm"
+	"github.com/spf13/afero"
 	"os"
 	p "plugin"
 
@@ -111,4 +114,26 @@ func getJob() (job.Job, error) {
 	}
 
 	return job, nil
+}
+
+func writeDocument(document xliff.Document, path string) error {
+	file, err := xml.MarshalIndent(document, "", " ")
+
+	if err != nil {
+		var language string
+
+		if len(document.Files) > 0 {
+			language = document.Files[0].TargetLanguage
+		}
+
+		return errors.New("failed to write xliff document for language " + language)
+	}
+
+	err = afero.WriteFile(fs, path, file, 0644)
+
+	if err != nil {
+		return errors.New("failed to write xliff file " + path)
+	}
+
+	return nil
 }

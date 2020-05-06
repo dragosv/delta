@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"encoding/xml"
 	"errors"
 	"github.com/dragosv/delta/db"
 	"github.com/dragosv/delta/xliff"
+	guuid "github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 var pushCommand = &cobra.Command{
@@ -64,7 +65,7 @@ func runPushCommand(source string, destination string) error {
 	sourceDocumentMap = make(map[string]xliff.Document)
 	documentMap = make(map[string]xliff.Document)
 
-	afero.Walk(fs, source, pushWalkFunc)
+	afero.Walk(fs, source, sourceWalkFunc)
 
 	for path, document := range sourceDocumentMap {
 		processErr := processSourceDocument(path, document)
@@ -77,19 +78,9 @@ func runPushCommand(source string, destination string) error {
 	jobID := strconv.FormatUint(uint64(dbJob.ID), 10)
 
 	for language, document := range documentMap {
-		file, err := xml.MarshalIndent(document, "", " ")
-
-		if err != nil {
-			return errors.New("failed to write xliff document for language " + language)
-		}
-
 		xliffPath := path.Join(destination, jobID, language+".xliff")
 
-		err = afero.WriteFile(fs, xliffPath, file, 0644)
-
-		if err != nil {
-			return errors.New("failed to write xliff file " + xliffPath)
-		}
+		writeDocument(document, xliffPath)
 	}
 
 	if plugin != "" {
@@ -105,7 +96,7 @@ func runPushCommand(source string, destination string) error {
 	return nil
 }
 
-func pushWalkFunc(path string, info os.FileInfo, err error) error {
+func sourceWalkFunc(path string, info os.FileInfo, err error) error {
 	if info == nil {
 		return nil
 	}
@@ -140,9 +131,10 @@ func processSourceDocument(path string, document xliff.Document) error {
 
 	if !document.IsComplete() {
 		dbFile = db.File{
-			JobID: dbJob.ID,
-			Job:   dbJob,
-			Path:  path,
+			JobID:    dbJob.ID,
+			Job:      dbJob,
+			Path:     path,
+			Language: document.Files[0].TargetLanguage,
 		}
 
 		err := database.Create(&dbFile).Error
@@ -156,6 +148,7 @@ func processSourceDocument(path string, document xliff.Document) error {
 			dbTransUnit = db.TransUnit{
 				Resname:        xliffTransUnit.Resname,
 				Path:           path,
+				Identifier:     strings.Replace(guuid.New().String(), "-", "", -1),
 				Qualifier:      xliffTransUnit.ID,
 				State:          xliffTransUnit.Target.State,
 				StateQualifier: xliffTransUnit.Target.StateQualifier,
@@ -163,6 +156,7 @@ func processSourceDocument(path string, document xliff.Document) error {
 				Target:         xliffTransUnit.Target.Data,
 				SourceLanguage: xliffTransUnit.Source.Language,
 				TargetLanguage: xliffTransUnit.Target.Language,
+				FileID:         dbFile.ID,
 			}
 
 			err = database.Create(&dbTransUnit).Error
@@ -188,7 +182,7 @@ func processSourceDocument(path string, document xliff.Document) error {
 			}
 
 			var transUnit = xliffTransUnit
-			transUnit.ID = strconv.FormatUint(uint64(dbTransUnit.ID), 10)
+			transUnit.ID = dbTransUnit.Identifier
 
 			document := documentMap[xliffTransUnit.Target.Language]
 

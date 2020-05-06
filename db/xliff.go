@@ -15,9 +15,10 @@ type Job struct {
 
 type File struct {
 	gorm.Model
-	JobID uint
-	Job   Job
-	Path  string
+	JobID    uint
+	Job      Job
+	Path     string
+	Language string
 }
 
 type TransUnit struct {
@@ -26,6 +27,7 @@ type TransUnit struct {
 	File           File
 	Resname        string
 	Path           string
+	Identifier     string
 	Qualifier      string
 	State          string
 	StateQualifier string
