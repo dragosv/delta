@@ -61,4 +61,8 @@ script:
   - go mod verify
   - go build
   - cd commands
-  - go test
+  - go test -coverprofile=coverage.txt -covermode=atomic
+  - go tool cover -func=coverage.txt
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
