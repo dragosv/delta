@@ -54,7 +54,11 @@ func runPullCommand(source string, destination string) error {
 			return errors.New("failed to get job plugin " + error.Error())
 		}
 
-		job.Pull(config, path.Join(destination, jobID))
+		pullErr := job.Pull(config, path.Join(destination, jobID))
+
+		if pullErr != nil {
+			return pullErr
+		}
 	}
 
 	destinationDocumentMap = make(map[string]xliff.Document)
@@ -62,10 +66,10 @@ func runPullCommand(source string, destination string) error {
 	afero.Walk(fs, path.Join(destination, jobID), pullWalkFunc)
 
 	for path, document := range destinationDocumentMap {
-		processErr := processDestinationDocument(path, document)
+		err := processDestinationDocument(path, document)
 
-		if processErr != nil {
-			panic(processErr)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -77,7 +81,7 @@ func runPullCommand(source string, destination string) error {
 		processErr := writeSourceDocument(path, document)
 
 		if processErr != nil {
-			panic(processErr)
+			return processErr
 		}
 	}
 

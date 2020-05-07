@@ -90,7 +90,7 @@ func runPushCommand(source string, destination string) error {
 			return errors.New("failed to get job plugin " + error.Error())
 		}
 
-		job.Push(config, path.Join(destination, jobID))
+		return job.Push(config, path.Join(destination, jobID))
 	}
 
 	return nil

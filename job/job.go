@@ -1,6 +1,6 @@
 package job
 
 type Job interface {
-	Push(config string, location string)
-	Pull(config string, location string)
+	Push(config string, location string) error
+	Pull(config string, location string) error
 }
