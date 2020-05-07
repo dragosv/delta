@@ -130,25 +130,39 @@ func processSourceDocument(path string, document xliff.Document) error {
 	var dbNote db.Note
 
 	if !document.IsComplete() {
-		dbFile = db.File{
-			JobID:    dbJob.ID,
-			Job:      dbJob,
-			Path:     path,
-			Language: document.Files[0].TargetLanguage,
-		}
+		database.Where("job_id = ? and language = ?", dbJob.ID, document.Files[0].TargetLanguage).First(&dbFile)
 
-		err := database.Create(&dbFile).Error
+		if database.NewRecord(dbFile) {
+			dbFile = db.File{
+				JobID:    dbJob.ID,
+				Job:      dbJob,
+				Path:     path,
+				Language: document.Files[0].TargetLanguage,
+			}
 
-		if err != nil {
-			return err
+			err := database.Create(&dbFile).Error
+
+			if err != nil {
+				return err
+			}
 		}
 
 		var incompleteTransUnits = document.IncompleteTransUnits()
 		for _, xliffTransUnit := range incompleteTransUnits {
+			var identifier string
+
+			database.Where("file_id = ? and qualifier = ?", dbFile.ID, xliffTransUnit.ID).First(&dbTransUnit)
+
+			if database.NewRecord(dbTransUnit) {
+				identifier = strings.Replace(guuid.New().String(), "-", "", -1)
+			} else {
+				identifier = dbTransUnit.Identifier
+			}
+
 			dbTransUnit = db.TransUnit{
 				Resname:        xliffTransUnit.Resname,
 				Path:           path,
-				Identifier:     strings.Replace(guuid.New().String(), "-", "", -1),
+				Identifier:     identifier,
 				Qualifier:      xliffTransUnit.ID,
 				State:          xliffTransUnit.Target.State,
 				StateQualifier: xliffTransUnit.Target.StateQualifier,

@@ -168,6 +168,58 @@ func TestRunPushCommand_OneFile(t *testing.T) {
 	assert.Equal(t, destinationTransUnit.Target.Language, "fr")
 }
 
+func TestRunPushCommand_TwoLanguages(t *testing.T) {
+	setup()
+
+	writeSourceTestDocument(xliff.TransUnit{
+		ID:      "379fc2df14fb48f39718a0c20392d259",
+		Resname: "label.test",
+		Source: xliff.Source{
+			Data:     "test",
+			Language: "en",
+		},
+		Target: xliff.Target{
+			State:          "new",
+			StateQualifier: "",
+			Data:           "",
+			Language:       "fr",
+		},
+		Notes: nil,
+	})
+
+	writeSourceTestDocument(xliff.TransUnit{
+		ID:      "379fc2df14fb48f39718a0c20392d259",
+		Resname: "label.test",
+		Source: xliff.Source{
+			Data:     "test",
+			Language: "en",
+		},
+		Target: xliff.Target{
+			State:          "new",
+			StateQualifier: "",
+			Data:           "",
+			Language:       "es",
+		},
+		Notes: nil,
+	})
+
+	runPushCommand(source, destination)
+
+	files := readDestinationDir()
+
+	assert.Equal(t, 2, len(files))
+
+	paths := getPaths(files)
+
+	firstDocument, _ := readDocument(paths[0])
+	secondDocument, _ := readDocument(paths[1])
+
+	firstTransUnit := firstDocument.Files[0].Body.TransUnits[0]
+	secondTransUnit := secondDocument.Files[0].Body.TransUnits[0]
+
+	assert.Equal(t, firstTransUnit.ID, secondTransUnit.ID)
+}
+
 func TestRunPushCommand_TranslatedFile(t *testing.T) {
 	setup()
 
