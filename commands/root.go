@@ -26,6 +26,8 @@ var (
 	destination        string
 	plugin             string
 	config             string
+	sourceLanguage     string
+	languagePattern    string
 
 	rootCmd = &cobra.Command{
 		Use:   "delta",
@@ -44,21 +46,25 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.delta)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "c", "config file (default is $HOME/.delta)")
 
 	rootCmd.Flags().StringVarP(&source, "source", "s", "", "Source directory to read from")
 	rootCmd.Flags().StringVarP(&destination, "destination", "d", "", "Destination directory to write to")
 	rootCmd.Flags().StringVarP(&databaseDialect, "dialect", "", "", "Database dialect")
 	rootCmd.Flags().StringVarP(&databaseConnection, "connection", "", "", "Database connection string")
-	rootCmd.Flags().StringVarP(&plugin, "plugin", "p", "", "Job plugin")
-	rootCmd.Flags().StringVarP(&config, "config", "c", "", "Job plugin configuration file")
+	rootCmd.Flags().StringVarP(&plugin, "plugin", "", "", "Job plugin")
+	rootCmd.Flags().StringVarP(&config, "plugin-config", "", "", "Job plugin configuration file")
+	rootCmd.Flags().StringVarP(&sourceLanguage, "language", "", "", "Source language")
+	rootCmd.Flags().StringVarP(&languagePattern, "pattern", "", "", "Language pattern regex")
 
 	viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
 	viper.BindPFlag("destination", rootCmd.PersistentFlags().Lookup("destination"))
 	viper.BindPFlag("dialect", rootCmd.PersistentFlags().Lookup("dialect"))
 	viper.BindPFlag("connection", rootCmd.PersistentFlags().Lookup("connection"))
 	viper.BindPFlag("plugin", rootCmd.PersistentFlags().Lookup("plugin"))
-	viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
+	viper.BindPFlag("plugin-config", rootCmd.PersistentFlags().Lookup("plugin-config"))
+	viper.BindPFlag("language", rootCmd.PersistentFlags().Lookup("language"))
+	viper.BindPFlag("pattern", rootCmd.PersistentFlags().Lookup("pattern"))
 }
 
 func er(msg interface{}) {

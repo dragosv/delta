@@ -21,6 +21,15 @@ type File struct {
 	Language string
 }
 
+type Identifier struct {
+	gorm.Model
+	JobID     uint
+	Job       Job
+	Data      string
+	Qualifier string
+	Path      string
+}
+
 type TransUnit struct {
 	gorm.Model
 	FileID         uint
@@ -56,6 +65,7 @@ func OpenDatabase(databaseDialect string, databaseConnection string) (database *
 
 	// Migrate the schema
 	database.AutoMigrate(&Job{})
+	database.AutoMigrate(&Identifier{})
 	database.AutoMigrate(&File{})
 	database.AutoMigrate(&TransUnit{})
 	database.AutoMigrate(&Note{})

@@ -32,6 +32,8 @@ func setup() {
 
 	source = path.Join("/delta/source", guuid.New().String())
 	destination = path.Join("/delta/destination", guuid.New().String())
+	sourceLanguage = "en"
+	languagePattern = "([a-z]{2})\\.xliff"
 }
 
 func TestRunPushCommand_NoFiles(t *testing.T) {

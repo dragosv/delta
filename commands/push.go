@@ -11,6 +11,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -38,6 +39,7 @@ var database *gorm.DB
 var dbJob db.Job
 var sourceDocumentMap map[string]xliff.Document
 var documentMap map[string]xliff.Document
+var patternRegexp *regexp.Regexp
 
 func init() {
 	rootCmd.AddCommand(pushCommand)
@@ -57,6 +59,12 @@ func runPushCommand(source string, destination string) error {
 	}
 
 	err := database.Create(&dbJob).Error
+
+	if err != nil {
+		return err
+	}
+
+	patternRegexp, err = regexp.Compile(languagePattern)
 
 	if err != nil {
 		return err
@@ -128,9 +136,20 @@ func processSourceDocument(path string, document xliff.Document) error {
 	var dbFile db.File
 	var dbTransUnit db.TransUnit
 	var dbNote db.Note
+	var dbIdentifier db.Identifier
 
 	if !document.IsComplete() {
-		database.Where("job_id = ? and language = ?", dbJob.ID, document.Files[0].TargetLanguage).First(&dbFile)
+		indexes := patternRegexp.FindStringSubmatchIndex(path)
+
+		if indexes == nil {
+			return errors.New("No language could be identified for file " + path)
+		}
+
+		start := len(indexes) - 2
+		end := len(indexes) - 1
+		mainPath := replaceAtIndex(path, sourceLanguage, indexes[start], indexes[end])
+
+		database.Where("job_id = ? and path = ?", dbJob.ID, document.Files[0].TargetLanguage).First(&dbFile)
 
 		if database.NewRecord(dbFile) {
 			dbFile = db.File{
@@ -151,12 +170,27 @@ func processSourceDocument(path string, document xliff.Document) error {
 		for _, xliffTransUnit := range incompleteTransUnits {
 			var identifier string
 
-			database.Where("file_id = ? and qualifier = ?", dbFile.ID, xliffTransUnit.ID).First(&dbTransUnit)
+			database.Where("job_id = ? and path = ? and qualifier = ?", dbJob.ID, mainPath, xliffTransUnit.ID).First(&dbIdentifier)
 
-			if database.NewRecord(dbTransUnit) {
+			if database.NewRecord(dbIdentifier) {
 				identifier = strings.Replace(guuid.New().String(), "-", "", -1)
+
+				dbIdentifier = db.Identifier{
+					Model:     gorm.Model{},
+					JobID:     dbJob.ID,
+					Job:       dbJob,
+					Data:      identifier,
+					Qualifier: xliffTransUnit.ID,
+					Path:      mainPath,
+				}
+
+				err := database.Create(&dbIdentifier).Error
+
+				if err != nil {
+					return err
+				}
 			} else {
-				identifier = dbTransUnit.Identifier
+				identifier = dbIdentifier.Data
 			}
 
 			dbTransUnit = db.TransUnit{
@@ -173,7 +207,7 @@ func processSourceDocument(path string, document xliff.Document) error {
 				FileID:         dbFile.ID,
 			}
 
-			err = database.Create(&dbTransUnit).Error
+			err := database.Create(&dbTransUnit).Error
 
 			if err != nil {
 				return err
@@ -222,4 +256,24 @@ func processSourceDocument(path string, document xliff.Document) error {
 	}
 
 	return nil
+}
+
+func replaceAtIndex(str string, repl string, start int, end int) string {
+	strRune := []rune(str)
+	replRune := []rune(repl)
+	out := []rune{}
+
+	for index := 0; index < start; index++ {
+		out = append(out, strRune[index])
+	}
+
+	for index := 0; index < len(replRune); index++ {
+		out = append(out, replRune[index])
+	}
+
+	for index := end; index < len(strRune); index++ {
+		out = append(out, strRune[index])
+	}
+
+	return string(out)
 }
